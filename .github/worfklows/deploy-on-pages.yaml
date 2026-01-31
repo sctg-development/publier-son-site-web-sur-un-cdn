@@ -1,0 +1,81 @@
+name: Build and deploy README as index.html
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: github-pages
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Convert README.md → index.html
+        shell: bash
+        run: |
+          npx -yes marked README.md -o index.body.html
+          cat << 'EOF' > index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Project README</title>
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                margin: 40px;
+                line-height: 1.6;
+              }
+              pre {
+                background-color: #f4f4f4;
+                padding: 10px;
+                overflow-x: auto;
+              }
+              code {
+                background-color: #f4f4f4;
+                padding: 2px 4px;
+              }
+              a.github-corner {
+                position: absolute;
+                top: 0;
+                right: 0;
+              }
+            </style>
+          EOF
+          cat doc_helper/github-corner.html >> index.html
+          cat doc_helper/mermaid-header.html >> index.html
+          cat << 'EOF' >> index.html
+          </head>
+          <body>
+          EOF
+          cat index.body.html >> index.html
+          cat << 'EOF' >> index.html
+          </body>
+          </html>
+          EOF
+          rm index.body.html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
